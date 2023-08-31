@@ -38,9 +38,10 @@ class HVPOperator(Operator):
     ):
 
         # size = int(sum(p.numel() for p in model.parameters()))
-        params = [p for p in model.parameters() if len(p.size()) > 1]
+        self.params = [p for p in model.parameters() if len(p.size()) > 1]
+        # params = scale_normalized_params 
         size = int(sum(p.numel() for p in model.parameters() if len(p.size()) > 1)) 
-        
+
         super(HVPOperator, self).__init__(size)
         self.grad_vec = torch.zeros(size)
         self.model = model
@@ -84,7 +85,7 @@ class HVPOperator(Operator):
         # )
 
         hessian_vec_prod_dict = torch.autograd.grad(
-            grad_vec, params, grad_outputs=vec, only_inputs=True
+            grad_vec, self.params, grad_outputs=vec, only_inputs=True
         )
 
         # concatenate the results over the different components of the network
@@ -142,8 +143,10 @@ class HVPOperator(Operator):
 
             output = self.model(input)
             loss = self.criterion(output, target)
+
+
             grad_dict = torch.autograd.grad(
-                loss, params, create_graph=True
+                loss, self.params, create_graph=True
             )
             if grad_vec is not None:
                 grad_vec += torch.cat([g.contiguous().view(-1) for g in grad_dict])
